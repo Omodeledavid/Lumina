@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Chat Interface</title>
+  <style>
+    /* styles here */
+    body {
+      body {
+font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+margin: 0;
+padding: 0;
+background-color: #f0f2f5;
+display: flex;
+justify-content: center;
+align-items: center;
+min-height: 100vh;
+color: #333;
+}
+.chat-container {
+background-color: #fff;
+border-radius: 10px;
+box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+width: 100%;
+max-width: 700px;
+height: 80vh;
+display: flex;
+flex-direction: column;
+overflow: hidden;
+}
+.chat-header {
+background-color: #333;
+color: #fff;
+padding: 15px 20px;
+font-size: 1.2em;
+font-weight: 600;
+border-top-left-radius: 10px;
+border-top-right-radius: 10px;
+display: flex;
+align-items: center;
+justify-content: center;
+}
+.chat-header .crown-logo {
+font-size: 1.2em;
+vertical-align: middle;
+margin-right: 10px;
+}
+.chat-messages {
+flex-grow: 1;
+padding: 20px;
+overflow-y: auto;
+background-color: #e9eef3; /* Light grey background for messages */
+display: flex;
+flex-direction: column;
+}
+.message-bubble {
+max-width: 80%;
+padding: 12px 18px;
+border-radius: 20px;
+margin-bottom: 10px;
+line-height: 1.5;
+word-wrap: break-word;
+box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+.user-message {
+background-color: #007bff;
+color: white;
+align-self: flex-end;
+border-bottom-right-radius: 5px;
+}
+.ai-message {
+background-color: #f0f0f0;
+color: #333;
+align-self: flex-start;
+border-bottom-left-radius: 5px;
+}
+.chat-input-area {
+display: flex;
+padding: 15px 20px;
+border-top: 1px solid #eee;
+background-color: #fff;
+border-bottom-left-radius: 10px;
+border-bottom-right-radius: 10px;
+}
+.chat-input-area textarea {
+flex-grow: 1;
+padding: 12px 15px;
+border: 1px solid #ddd;
+border-radius: 25px;
+font-size: 1em;
+resize: none;
+outline: none;
+margin-right: 10px;
+max-height: 100px; /* Limit input height */
+overflow-y: auto;
+}
+.chat-input-area button {
+background-color: #007bff;
+color: white;
+border: none;
+border-radius: 50%;
+width: 45px;
+height: 45px;
+display: flex;
+justify-content: center;
+align-items: center;
+font-size: 1.5em;
+cursor: pointer;
+transition: background-color 0.2s;
+flex-shrink: 0; /* Prevent button from shrinking */
+}
+.chat-input-area button:hover {
+background-color: #0056b3;
+}
+/* Responsive adjustments */
+@media (max-width: 768px) {
+.chat-container {
+height: 95vh;
+width: 95vw;
+border-radius: 0; /* Full screen on small devices */
+}
+.chat-header {
+border-radius: 0;
+}
+.chat-input-area {
+border-radius: 0;
+}
+}
+
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat-header">
+      <span class="crown-logo"></span>AI Chat Assistant
+    </div>
+    <div class="chat-messages" id="chatMessages">
+      <div class="message-bubble ai-message">Hello! How can I assist you today?</div>
+    </div>
+    <div class="chat-input-area">
+  <textarea id="messageInput" placeholder="Type your message..." rows="1"></textarea>
+  <button id="sendButton">➤</button>
+</div>
+
+  <script>
+    const messageInput = document.getElementById('messageInput');
+    const sendButton = document.getElementById('sendButton');
+    const chatMessages = document.getElementById('chatMessages');
+    const apiKey ='AIzaSyA2OZq2WgYwHeODVKDQvUszCUTqTChB-uc';
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+    function addMessage(text, sender) {
+  const messageDiv = document.createElement('div');
+  messageDiv.classList.add('message-bubble');
+  if (sender === 'user') {
+    messageDiv.classList.add('user-message');
+  } else {
+    messageDiv.classList.add('ai-message');
+  }
+  messageDiv.textContent = text;
+  chatMessages.appendChild(messageDiv);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+async function sendMessage() {
+  const userMessage = messageInput.value.trim();
+  if (userMessage === '') return;
+
+  // Check if data sharing is enabled
+  const dataSharingEnabled = navigator.onLine;
+  if (!dataSharingEnabled) {
+    addMessage('Data sharing is currently disabled. Please enable data sharing to interact with me.', 'ai');
+    return;
+  }
+
+  addMessage(userMessage, 'user');
+  messageInput.value = '';
+  const thinkingMessage = document.createElement('div');
+  thinkingMessage.classList.add('message-bubble', 'ai-message', 'typing');
+  thinkingMessage.textContent = 'Typing...';
+  chatMessages.appendChild(thinkingMessage);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+
+  try {
+    const data = {
+      "contents": [
+        {
+          "parts": [
+            {
+              "text": userMessage
+            }
+          ]
+        }
+      ]
+    };
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    if (!result.candidates || !result.candidates[0] || !result.candidates[0].content || !result.candidates[0].content.parts || !result.candidates[0].content.parts[0] || !result.candidates[0].content.parts[0].text) {
+      throw new Error('Invalid response format');
+    }
+
+    const aiResponse = result.candidates[0].content.parts[0].text;
+    chatMessages.removeChild(thinkingMessage);
+    addMessage(aiResponse, 'ai');
+  } catch (error) {
+    console.error('Error:', error);
+    chatMessages.removeChild(thinkingMessage);
+    if (error.message.includes('HTTP error')) {
+      addMessage('Error: Unable to reach the server. Please try again later.', 'ai');
+    } else if (error.message.includes('Invalid response format')) {
+      addMessage('Error: Invalid response from the server. Please try again later.', 'ai');
+    } else {
+      addMessage('Error: An unexpected error occurred. Please try again later.', 'ai');
+    }
+  }
+}
+
+sendButton.addEventListener('click', sendMessage);
+messageInput.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+  </script>
+</body>
+</html>
